@@ -1,23 +1,23 @@
 .data
 	welcomeMessage: .asciiz "Start programu\n"
-	endMessage: .asciiz "Koniec działania programu\n"
-	errorMessage: .asciiz "Nie udało się otworzyć pliku\n"
-	inputFileName: .asciiz "tmp1.bmp"
+	endMessage: .asciiz "Koniec dzialania programu\n"
+	errorMessage: .asciiz "Nie udalo się otworzyć pliku\n"
+	inputFileName: .asciiz "in.bmp"
 	outputFileName: .asciiz "out.bmp"
 	enter: .asciiz "\n"
 	space: .asciiz " "
 	
 	
-	.align 2 # albo 4? czy w ogóle to powinno tu być? no ale inaczej nie działa więc może tak
+	.align 2
 	sizeBuffor: .space 4
 	reservedBuffor: .space 4
 	offsetBuffor: .space 4
-	buffor: .space 4
+	bufforFileType: .space 4
 	headerBuffor: .space 4
 	widthBuffer: .space 4
 	heightBuffer: .space 4
 	
-	array: .space 25 # przestrzeń do przechowywania 25 (5x5) pixeli 
+	array: .space 25 # przestrzeń do przechowywania 25 (5x5) pixeli
 	
 .text
 	.globl main
@@ -50,7 +50,7 @@ readFileInformation:
 	 # wczytanie 2 bajtów FileType
 	 li $v0, 14
 	 move $a0, $t0
-	 la $a1, buffor
+	 la $a1, bufforFileType
 	 li $a2, 2
 	 syscall
 	 
@@ -62,7 +62,7 @@ readFileInformation:
 	 syscall
 	 
 	 # rozmiar pliku zapisany do $s0
-	 lw  $s0, sizeBuffor # !!!!!!!!!!!!!!!potencjalny błąd
+	 lw  $s0, sizeBuffor
 	 
 	 # wczytanie 4 bajtów Reserver
 	 li $v0, 14
@@ -115,7 +115,6 @@ copyBitmap:
 	 syscall
 	 
 	 move $t1, $v0 # umieszczenie adresu do zaalokowanej pamięci w $t1
-	 #################tutaj moze cos powinno byc########################################
 	 
 	 # otworzenie pliku
 	 li $v0, 13
@@ -162,19 +161,19 @@ copyBitmap:
 	 syscall
 	 move $s7, $v0
 	 
+	 # wyzerowanie iteratorów
 	 addiu $t6, $zero, 0
 	 addiu $t7, $zero, 0
 	 addiu $t8, $zero, 0
 	 addiu $t9, $zero, 0
 	 
+countPadding:	 
 	 andi $s4, $s1, 3 # reszta z dzielenia szerokości przez 4
 	 
-	 beq $s4, 0, analizePixel
-	 
+	 beq $s4, 0, analizePixel # jeśli reszta jest 0 padding wynosi 0
+	 			# inaczej dla 3 -> 1, 2 -> 2, 1 -> 3
 	 addi $t4, $zero, 4
 	 sub $s4, $t4, $s4
-	 
-	 
 	 
 	 
 analizePixel:
@@ -194,66 +193,28 @@ analizePixel:
 	subi $t0, $t0, 2
 	
 loopNr1:
-	#lbu $t9, ($t2)
-	
-	#li $v0, 1
-	#move $a0, $t4
-	#syscall
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	#li $v0, 1
-	#move $a0, $t5
-	#syscall
-	#li $v0, 4
-	#la $a0, enter
-	#syscall
-	
-	#sprawdzenie czy pixel który chcemy dodać do tablicy mieści się w bitmapie
+	#sprawdzenie czy pixel który chcemy dodać do tablicy mieści się w bitmapie, jeśli nie to przechodzimy do kolejnego
 	blt $t4, 0, nextPixel
 	blt $t5, 0, nextPixel
 	bge $t4, $s2, nextPixel
 	bge $t5, $s1, nextPixel
 	
 	# załadowanie bajtu do tablicy
-	#addi $s7, 
-	#addu $t2, $t2, $t1
 	lbu $s5, ($t0) # wyciągnięcie wartości spod pixela wskazywanego przez $t0
 	sb $s5, array($t3) # dodanie elementu do tablicy
 	addi $t3, $t3, 1 # zwiększenie licznika elementów w tablicy
 	
-	#li $v0, 1
-	#move $a0, $s5
-	#syscall
-	
 	j nextPixel
 	
-sort:	#na razie tylko wypisuje to co jest w tablicy
+sort:
 	addi $s6, $zero, 0
 unsortedPrint:
-	#lbu $s5, array($s6)
-	#addi $s6, $s6, 1 
-	
-	#li $v0, 1
-	#move $a0, $s5
-	#syscall
-	
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	
-	#bne $s6, $t3, unsortedPrint
-	#li $v0, 4
-	#la $a0, enter
-	#syscall
-
-
 	# $s6 - licznik zewnętrznej pętli
 	# $s5 - licznik wewnętrznej pętli
 	move $s6, $t3
 	
 sortLoop1: 
-	addi $s5, $zero, 1
+	addi $s5, $zero, 1 # ustawiamy na początku na 1, aby można było sprawdzić warunek $s5 < $6 - 1
 sortLoop2:
 	# załadowanie do $s0 i $s3 elementów tablicy o indeksach $s5 i $s5+1
 	addi $s5, $s5, -1
@@ -264,19 +225,6 @@ sortLoop2:
 	
 	ble $s0, $s3, afterSwap
 	# swap - załadowanie do tablicy $s0 i $s3 w odwrotnej kolejności
-	#li $v0, 1
-	#move $a0, $s0
-	#syscall
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	#li $v0, 1
-	#move $a0, $s3
-	#syscall
-	#li $v0, 4
-	#la $a0, enter
-	#syscall
-	
 	sb $s3, array($s5)
 	addi $s5, $s5, 1
 	sb $s0, array($s5)
@@ -290,57 +238,16 @@ afterSwap:
 	bgt $s6, 0, sortLoop1 # while $s6 > 1
 # sortLoop1 END	
 	addi $s6, $zero, 0
-sortedPrint:
-	#lbu $s5, array($s6)
-	#addi $s6, $s6, 1 
-	
-	#li $v0, 1
-	#move $a0, $s5
-	#syscall
-	
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	
-	#bne $s6, $t3, sortedPrint
-	
-	
-	
 endSort:
-	#li $v0, 4
-	#la $a0, enter
-	#syscall
-	
-	#li $v0, 1
-	#move $a0, $t6
-	#syscall
-	
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	
-	#li $v0, 1
-	#move $a0, $t7
-	#syscall
-	
-	#li $v0, 4
-	#la $a0, enter
-	#syscall
-	
-	
-#########	########## END SORT #############	##########
-	
 	# $s5 - numer analizowanego pixela i tym samym indeks pod który wrzucamy pixel w zmodyfikowanej tablicy
 	move $s5, $s1
 	add $s5, $s5, $s4 # szerokość wiersza z paddingiem
 	mul $s5, $s5, $t6 # pomnożenie razy numer wiersza
 	add $s5, $s5, $t7 # dodanie numeru kolumny
-	
 	add $s5, $s5, $s7 # teraz $s5 wskazuje miejsce gdzie należy wstawić wartość pixela
 	
 	move $s0, $t3
-	
-	sra $s0, $s0, 1
+	sra $s0, $s0, 1 # podzielenie przez 2; $s0 przechowuje indeks środkowego elementu
 	
 	lbu $s0, array($s0) # wstawiamy do $s0 medianę
 	sb $s0, ($s5) # i ładujemy ją do tablicy	
@@ -355,8 +262,7 @@ endSort:
 	add $t2, $t2, $s4 # przesunięcie uwzględniające padding
 	bne $t6, $s2, analizePixel # jeśli nie przeszliśmy ostatniego wiersza to kontynuujemy
 	
-	j print
-	j saveFile
+	j swapPixels
 	
 nextPixel:
 	# przejście do następnego piksela do dodania
@@ -375,18 +281,7 @@ nextPixel:
 	
 	bne $t9, 5, loopNr1
 	j sort
-		 
-	#li $v0, 1
-	#move $a0, $s1
-	#syscall
-	
-	#li $v0, 4
-	#la $a0, space
-	#syscall
-	
-	#li $v0, 1
-	#move $a0, $s2
-	#syscall
+
 	
 	 
 print:
@@ -442,10 +337,6 @@ swapLoop2:
 	
 	bne $t8,$s6, swapLoop2
 	
-	li $v0, 4
-	la $a0, enter
-	syscall
-	
 	addi $t7, $t7, 1
 	
 	bne $t7,$s2, swapLoop1 
@@ -455,17 +346,17 @@ swapLoop2:
 	 
 	 
 	 
-saveFile: ################## nie zapisuje #######################################
+saveFile:
 	# otwórz plik
 	li $v0, 13
-	la $a0, inputFileName
+	la $a0, outputFileName
 	li $a1, 1 # flaga zapisywania
 	li $a2, 0
 	syscall
 	
 	move $t0, $v0 # pobranie deskryptora pliku
 
-	bltz $t0, cannotOpenFile
+	bltz $t0, cannotOpenFile # sprawdzenie czy udało się otworzyć plik
 	
 	lw $s0, sizeBuffor # umieszczenie rozmiaru w $s0
 	
@@ -479,10 +370,6 @@ saveFile: ################## nie zapisuje ######################################
 	#zamknięcie pliku
 	li $v0, 16
 	move $a0, $t0
-	syscall
-	
-	li $v0, 1
-	move $a0, $s0
 	syscall
 	
 	j exit
